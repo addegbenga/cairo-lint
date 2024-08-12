@@ -7,6 +7,8 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{SyntaxNode, TypedSyntaxNode};
 use cairo_lang_utils::Upcast;
 
+
+
 use crate::db::AnalysisDatabase;
 use crate::plugin::{diagnostic_kind_from_message, CairoLintKind};
 

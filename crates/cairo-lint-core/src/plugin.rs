@@ -22,6 +22,7 @@ pub struct CairoLint;
 pub enum CairoLintKind {
     DestructMatch,
     MatchForEquality,
+    EmptyWithBrackets,
     Unknown,
 }
 
@@ -29,6 +30,7 @@ pub fn diagnostic_kind_from_message(message: &str) -> CairoLintKind {
     match message {
         CairoLint::DESTRUCT_MATCH => CairoLintKind::DestructMatch,
         CairoLint::MATCH_FOR_EQUALITY => CairoLintKind::MatchForEquality,
+        CairoLint::EMPTY_WITH_BRACKETS => CairoLintKind::EmptyWithBrackets,
         _ => CairoLintKind::Unknown,
     }
 }
@@ -38,6 +40,7 @@ impl CairoLint {
         "you seem to be trying to use `match` for destructuring a single pattern. Consider using `if let`";
     const MATCH_FOR_EQUALITY: &'static str =
         "you seem to be trying to use `match` for an equality check. Consider using `if`";
+    const EMPTY_WITH_BRACKETS: &'static str = "enum variant has empty brackets";
 
     pub fn check_destruct_match(
         &self,
@@ -105,6 +108,26 @@ impl CairoLint {
             (_, _) => (),
         }
     }
+    pub fn check_variant(&self, db: &dyn SyntaxGroup, variant: &Pattern) -> Option<PluginDiagnostic> {
+        if self.is_redundant_parentheses(db, variant) {
+            return Some(PluginDiagnostic {
+                stable_ptr: variant.stable_ptr().untyped(),
+                message: "This enum variant has redundant parentheses and can be simplified.".to_string(),
+                severity: Severity::Warning,
+            });
+        }
+        None
+    }
+
+    fn is_redundant_parentheses(&self, db: &dyn SyntaxGroup, pattern: &Pattern) -> bool {
+        let syntax_node = pattern.as_syntax_node();
+        // Check if the pattern is of type `PatternEnum`
+        if syntax_node.kind(db) == SyntaxKind::PatternEnum {
+            pattern.as_syntax_node().get_text(db).contains("()")
+        } else {
+            false
+        }
+    }
 }
 
 impl AnalyzerPlugin for CairoLint {
@@ -126,6 +149,12 @@ impl AnalyzerPlugin for CairoLint {
                                 &ExprMatch::from_syntax_node(db.upcast(), descendant),
                                 &mut diags,
                             ),
+                            SyntaxKind::PatternEnum => {
+                                let pattern = Pattern::from_syntax_node(db.upcast(), descendant);
+                                if let Some(diag) = self.check_variant(db.upcast(), &pattern) {
+                                    diags.push(diag);
+                                }
+                            }
                             SyntaxKind::ItemExternFunction => (),
                             _ => (),
                         }

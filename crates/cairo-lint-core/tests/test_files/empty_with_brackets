@@ -1,0 +1,21 @@
+//! > redundant parentheses on enum
+
+//! > cairo_code
+enum MyEnum {
+    HasData: u8,
+    HasNoData: ()
+}
+
+fn main() {
+    let a = MyEnum::HasNoData(());
+}
+
+//! > diagnostics
+warning: Plugin diagnostic: enum variant has redundant empty brackets
+--> lib.cairo:3:9
+let a = MyEnum::HasNoData(());
+
+//! > fixed
+fn main() {
+    let a = MyEnum::HasNoData;
+}

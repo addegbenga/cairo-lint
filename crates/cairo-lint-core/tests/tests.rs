@@ -30,3 +30,5 @@ test_file!(
     "nested destructuring match twisted differently",
     "nested destructuring match second arm"
 );
+
+test_file!(empty_with_brackets, "redundant parentheses on enum");
